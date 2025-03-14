@@ -2,6 +2,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
 from accelerate import PartialState
+from datetime import datetime
 
 from utils import (
     get_redteam,
@@ -17,8 +18,9 @@ def main():
     ## config
 
     model_name = "/scratch/public_models/huggingface/Qwen/Qwen2.5-7B-Instruct"
-    run_name = "qwen_rules"
-    output_dir = f"results/{run_name}"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"qwen_rules_{timestamp}"
+    output_dir = f"/data/jonathan/models/reasoning/{run_name}"
 
     training_args = GRPOConfig(
         output_dir=output_dir,
@@ -29,7 +31,7 @@ def main():
         weight_decay=0.1,
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
-        logging_steps=1,
+        logging_steps=5,
         bf16=True,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=2,

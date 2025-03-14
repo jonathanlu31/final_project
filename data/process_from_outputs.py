@@ -1,3 +1,5 @@
+"""Create prompts for GRPO based on output results from Qwen2.5 7B Instruct on RuLES Redteam. This is necessary because some of the test cases are multiturn so I prefill with a response from the original model and only grade the last response"""
+
 from collections import defaultdict
 import json
 import os

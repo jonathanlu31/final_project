@@ -47,7 +47,7 @@ def get_redteam(shuffle: bool) -> Dataset:
     dataset_repo = "jonluj/rules_redteam_qwen2.5-7b"
     datasets = [
         load_dataset(dataset_repo, config)["train"]
-        for config in get_dataset_config_names(dataset_repo)
+        for config in get_dataset_config_names(dataset_repo) if config not in ["AccessControl", "DiningCryptographers"]
     ]
     formatted_data = [
         data.map(
