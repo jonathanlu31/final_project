@@ -7,7 +7,7 @@ from datasets import load_dataset
 from accelerate import PartialState
 import logging
 import sys
-
+from sklearn.model_selection import train_test_split
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -29,7 +29,10 @@ def main():
 
     if args.dataset == "medical":
         with PartialState().local_main_process_first():
-                dataset = load_dataset("FreedomIntelligence/medical-o1-reasoning-SFT")
+            dataset = load_dataset('FreedomIntelligence/medical-o1-reasoning-SFT', 'en') 
+            split_dataset = dataset["train"].train_test_split(test_size=0.05, seed=42)
+        train_data = split_dataset["train"]
+        eval_data = split_dataset["test"]
         run_prefix = "sft_qwen_medical"
         train_dataset = dataset["train"]
     else:
@@ -64,7 +67,7 @@ def main():
         num_train_epochs=3,
         save_steps=100,
         save_total_limit=2,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         max_grad_norm=1.0,
         report_to="wandb",
         log_on_each_node=False,
@@ -72,12 +75,11 @@ def main():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
         args=training_args,
+        processing_class=tokenizer,
         train_dataset=train_dataset,
-        formatting_func=formatting_func,
-        max_seq_length=2048,
-        packing=True,
+        eval_dataset=eval_data,
+        formatting_func=formatting_func
     )
     trainer.train()
     logger.info("Training completed")
