@@ -1,0 +1,52 @@
+# Dataset configuration
+dataset:
+  name: "pir"  # Options: "medical", "pir"
+  path: "jonluj/pir"
+  split: "train"
+  test_size: 0.05
+
+# Model configuration
+model:
+  name: "Qwen/Qwen2.5-0.5B-Instruct"
+  padding_side: "left"
+  trust_remote_code: true
+  dtype: "float16"
+  attn_implementation: "sdpa"
+  device_map: "auto"
+  load_in_8bit: false
+  load_in_4bit: false
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+
+# LoRA configuration
+lora:
+  enabled: true
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: "none"
+  task_type: "CAUSAL_LM"
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+# Training configuration
+training:
+  seed: 42
+  run_prefix: "sft_pir_lora"
+  output_dir: "./outputs"
+  learning_rate: 5e-6
+  weight_decay: 0.1
+  warmup_ratio: 0.1
+  lr_scheduler_type: "cosine"
+  logging_steps: 5
+  bf16: false
+  fp16: true
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4
+  num_train_epochs: 3
+  save_steps: 100
+  save_total_limit: 2
+  evaluation_strategy: "epoch"
+  max_grad_norm: 1.0
+  report_to: "wandb"
+  log_on_each_node: false
+  packing: true
