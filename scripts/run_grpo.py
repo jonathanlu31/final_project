@@ -4,8 +4,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
 from accelerate import PartialState
 from datetime import datetime
-from instructions_registry import INSTRUCTION_DICT
-from utils import (
+from reasoning import (
     get_redteam,
     get_ifeval,
     reward_instruction_following,

@@ -4,15 +4,12 @@ from datasets import (
     get_dataset_config_names,
     concatenate_datasets,
 )
-import scenarios
+import reasoning.rules.scenarios as scenarios
 
 import re
 import string
 from typing import List, Union
-from message import Message
-import json
-from instructions_registry import INSTRUCTION_DICT
-import inspect
+from reasoning.rules.message import Message
 
 REASONING_SYSTEM_PROMPT = """\
 First think through your response within <think> </think> tags. Then provide your final response. Follow the following format:
@@ -44,23 +41,6 @@ def normalize_params(params):
         "balance1": params["balance1"] if "balance1" in params else None,
         "balance2": params["balance2"] if "balance2" in params else None,
     }
-
-def get_ifeval(shuffle: bool = True) -> Dataset:
-    data = []
-    dataset_path = "datagen/ifeval/ifeval.jsonl"
-    with open(dataset_path, "r") as f:
-        for line in f:
-            ex = json.loads(line)
-            data.append({
-                "prompt": ex["messages"],
-                "instruction_ids": ex["instruction_id_list"],
-                "kwargs": ex["kwargs"]
-            })
-
-    dataset = Dataset.from_list(data)
-    if shuffle:
-        return dataset.shuffle(seed=42)
-    return dataset
 
 def get_redteam(shuffle: bool) -> Dataset:
     dataset_repo = "jonluj/rules_redteam_qwen2.5-7b"
@@ -94,44 +74,6 @@ def get_redteam(shuffle: bool) -> Dataset:
     if shuffle:
         return full_dataset.shuffle(seed=42)
     return full_dataset
-
-
-def extract_response_text(completions):
-    return [completion[0]['content'] for completion in completions]
-
-def reward_instruction_following(
-    completions,
-    instruction_ids: List[List[str]],
-    kwargs: List[List[dict]],
-    **_
-) -> List[float]:
-    responses = extract_response_text(completions)
-    rewards = []
-
-    for i, response in enumerate(responses):
-        follow_flags = []
-
-        for j, instruction_id in enumerate(instruction_ids[i]):
-            instruction_cls = INSTRUCTION_DICT[instruction_id]
-            instruction = instruction_cls(instruction_id)
-
-            # Filter kwargs to only accepted arguments
-            valid_keys = inspect.signature(instruction.build_description).parameters
-            safe_kwargs = {
-                k: v for k, v in kwargs[i][j].items() if k in valid_keys
-            }
-
-            try:
-                instruction.build_description(**safe_kwargs)
-                followed = instruction.check_following(response)
-                follow_flags.append(bool(followed))
-            except Exception:
-                follow_flags.append(False)
-
-        reward = sum(follow_flags) / len(follow_flags) if follow_flags else 0.0
-        rewards.append(reward)
-
-    return rewards
 
 def extract_answer(r) -> str:
     if "</think>" not in r:

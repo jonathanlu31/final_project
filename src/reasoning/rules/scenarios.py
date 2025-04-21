@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Dict, List, Union
 
-from message import Message, Role
-import assets
-import utils
+from reasoning.rules.message import Message, Role
+import reasoning.rules.assets as assets
+import reasoning.rules.utils as utils
 
 with resources.files(assets).joinpath("nouns.txt").open() as file:
     ANSWERS = [line.strip() for line in file.readlines()]

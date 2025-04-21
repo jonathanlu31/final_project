@@ -22,7 +22,7 @@ import re
 import string
 from typing import Dict, Optional, Sequence, Union
 
-import instructions_util
+import reasoning.ifeval.instructions_util as instructions_util
 import langdetect
 from absl import logging
 

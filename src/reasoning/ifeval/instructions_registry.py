@@ -15,7 +15,7 @@
 
 """Registry of all instructions."""
 
-import instructions
+import reasoning.ifeval.instructions as instructions
 
 _KEYWORD = "keywords:"
 
