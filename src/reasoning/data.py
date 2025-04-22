@@ -1,25 +1,26 @@
 from accelerate import PartialState
 from datasets import Dataset, load_dataset
+from transformers import AutoTokenizer
 
 from reasoning.configs import DataArguments
 
 
-def format_pir_data(example):
-    messages = example["messages"]
-    formatted_text = ""
-
-    for message in messages:
-        role = message["role"]
-        content = message.get("content", "")
-
-        if role == "system":
-            formatted_text += f"<|im_start|>system\n{content}<|im_end|>\n"
-        elif role == "user":
-            formatted_text += f"<|im_start|>user\n{content}<|im_end|>\n"
-        elif role == "assistant":
-            formatted_text += f"<|im_start|>assistant\n{content}<|im_end|>\n"
-
-    return {"formatted_text": formatted_text}
+def format_pir_data(tokenizer: AutoTokenizer, example: dict[str, str], tokenize: bool = False):
+    last_message = example["messages"][-1]
+    assert last_message["role"] == "assistant"
+    conversation = tokenizer.apply_chat_template(
+        example["messages"][:-1], tokenize=False, add_generation_prompt=True
+    )
+    # NOTE: this only works for R1 chat template
+    conversation += (
+        last_message["reasoning_content"].rstrip()
+        + "\n</think>\n\n"
+        + last_message["content"].strip()
+        + "<｜end▁of▁sentence｜>"
+    )
+    if tokenize:
+        return {**tokenizer(conversation, add_special_tokens=False)}
+    return {"text": conversation}
 
 
 def format_medical_data(example):
@@ -28,25 +29,21 @@ def format_medical_data(example):
     }
 
 
-def get_dataset(data_args: DataArguments, seed: int) -> Dataset:
+def get_dataset(data_args: DataArguments, seed: int, tokenizer: AutoTokenizer) -> Dataset:
+    """Loads and processes the dataset"""
     dataset_name = data_args.dataset_name
 
     if dataset_name == "pir":
         with PartialState().local_main_process_first():
-            dataset = load_dataset(data_args.dataset_path)
-            split_dataset = dataset[data_args.split].train_test_split(
+            dataset = load_dataset(data_args.dataset_path)[data_args.split]
+            dataset = dataset.map(
+                lambda x: format_pir_data(tokenizer, x, tokenize=True), remove_columns=dataset.column_names, num_proc=4,
+            )
+            split_dataset = dataset.train_test_split(
                 test_size=data_args.test_size, seed=seed
             )
         train_data = split_dataset["train"]
         eval_data = split_dataset["test"]
-
-        # Process the PIR dataset
-        train_data = train_data.map(
-            format_pir_data, remove_columns=train_data.column_names
-        )
-        eval_data = eval_data.map(
-            format_pir_data, remove_columns=eval_data.column_names
-        )
 
     elif dataset_name == "medical":
         with PartialState().local_main_process_first():

@@ -8,8 +8,14 @@ from datetime import datetime
 import torch
 import yaml
 from peft import LoraConfig, get_peft_model
-from reasoning import DataArguments, ModelArguments, SFTConfig, get_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, set_seed
+from reasoning import (
+    DataArguments,
+    ModelArguments,
+    SFTConfig,
+    get_dataset,
+    get_tokenizer_and_collator,
+)
+from transformers import AutoModelForCausalLM, HfArgumentParser, set_seed
 from trl import SFTTrainer
 
 logger = logging.getLogger(__name__)
@@ -17,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 def main(args):
     parser = HfArgumentParser((ModelArguments, DataArguments, SFTConfig))
-    model_args, data_args, training_args = parser.parse_yaml_file(args.config)
+    parsed: tuple[ModelArguments, DataArguments, SFTConfig] = parser.parse_yaml_file(args.config)
+    model_args, data_args, training_args = parsed
 
     set_seed(training_args.seed)
     if training_args.wandb_project:
@@ -31,25 +38,20 @@ def main(args):
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    logger.setLevel("INFO")
+    log_level = training_args.get_process_log_level()
+    logger.setLevel(log_level)
 
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
         + f" distributed training: {bool(training_args.local_rank != -1)}"
     )
-    logger.info(f"Model parameters {model_args}")
-    logger.info(f"Data parameters {data_args}")
-    logger.info(f"Training/evaluation parameters {training_args}")
+    logger.info(f"Model arguments {model_args}")
+    logger.info(f"Data arguments {data_args}")
+    logger.info(f"Training/evaluation arguments {training_args}")
 
     # last_checkpoint = get_checkpoint(training_args)
     # if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
     #     logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
-
-    ###############
-    # Setup dataset
-    ###############
-
-    train_data, eval_data = get_dataset(data_args, training_args.seed)
 
     # Setup model name and output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -62,13 +64,13 @@ def main(args):
     # Setup tokenizer
     ###############
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name_or_path,
-        padding_side="left",
-        trust_remote_code=model_args.trust_remote_code,
-    )
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer, collator = get_tokenizer_and_collator(model_args.tokenizer_name_or_path)
+
+    ###############
+    # Setup dataset
+    ###############
+
+    train_data, eval_data = get_dataset(data_args, training_args.seed, tokenizer)
 
     ###############
     # Load model
@@ -103,15 +105,15 @@ def main(args):
             target_modules=model_args.target_modules,
         )
         model = get_peft_model(model, peft_config)
-        model.print_trainable_parameters()
+        if training_args.local_rank == 0:
+            model.print_trainable_parameters()
 
     trainer = SFTTrainer(
         model=model,
         args=training_args,
-        tokenizer=tokenizer,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        formatting_func=lambda x: x["formatted_text"],
+        data_collator=collator,
     )
 
     trainer.train()
