@@ -972,6 +972,6 @@ if __name__ == "__main__":
                 result = scenario.evaluate(
                     Message.unserialize(testcase["messages"]), True
                 )
-                assert (
-                    result == testcase["result"]["passed"]
-                ), f"{result}, {testcase['result']['passed']}, {testcase['id']}"
+                assert result == testcase["result"]["passed"], (
+                    f"{result}, {testcase['result']['passed']}, {testcase['id']}"
+                )

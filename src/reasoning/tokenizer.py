@@ -1,11 +1,10 @@
 from transformers import AutoTokenizer
 from trl import DataCollatorForCompletionOnlyLM
 
+
 def get_tokenizer_and_collator(tokenizer_path: str):
     tokenizer = AutoTokenizer.from_pretrained(
-        tokenizer_path,
-        padding_side="left",
-        use_fast=True
+        tokenizer_path, padding_side="left", use_fast=True
     )
     if "R1" in tokenizer_path:
         response_template = "<｜Assistant｜><think>"

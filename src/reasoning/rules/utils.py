@@ -42,11 +42,13 @@ def normalize_params(params):
         "balance2": params["balance2"] if "balance2" in params else None,
     }
 
+
 def get_redteam(shuffle: bool) -> Dataset:
     dataset_repo = "jonluj/rules_redteam_qwen2.5-7b"
     datasets = [
         load_dataset(dataset_repo, config)["train"]
-        for config in get_dataset_config_names(dataset_repo) if config not in ["AccessControl", "DiningCryptographers"]
+        for config in get_dataset_config_names(dataset_repo)
+        if config not in ["AccessControl", "DiningCryptographers"]
     ]
     formatted_data = [
         data.map(
@@ -74,6 +76,7 @@ def get_redteam(shuffle: bool) -> Dataset:
     if shuffle:
         return full_dataset.shuffle(seed=42)
     return full_dataset
+
 
 def extract_answer(r) -> str:
     if "</think>" not in r:
@@ -118,8 +121,12 @@ def strict_format_reward_func(completions, **kwargs) -> list[float]:
     matches = [re.match(pattern, r, flags=re.DOTALL) for r in responses]
     return [0.5 if match else 0.0 for match in matches]
 
+
 def loose_format_reward_func(completions, **kwargs) -> list[float]:
-    return [0.5 if "</think>" in completion[0]['content'] else 0.0 for completion in completions]
+    return [
+        0.5 if "</think>" in completion[0]["content"] else 0.0
+        for completion in completions
+    ]
 
 
 def normalize(response: str):

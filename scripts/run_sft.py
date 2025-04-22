@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 def main(args):
     parser = HfArgumentParser((ModelArguments, DataArguments, SFTConfig))
-    parsed: tuple[ModelArguments, DataArguments, SFTConfig] = parser.parse_yaml_file(args.config)
+    parsed: tuple[ModelArguments, DataArguments, SFTConfig] = parser.parse_yaml_file(
+        args.config
+    )
     model_args, data_args, training_args = parsed
 
     set_seed(training_args.seed)

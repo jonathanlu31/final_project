@@ -8,10 +8,10 @@ dependencies = [
     "datasets",
     "trl",
     "liger-kernel",
-    "pyyaml"
+    "pyyaml",
     "peft",
     "accelerate",
-    "torch"
+    "torch",
 ]
 
 [build-system]

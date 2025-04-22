@@ -3,31 +3,33 @@ import json
 from reasoning.ifeval.instructions_registry import INSTRUCTION_DICT
 import inspect
 
+
 def get_ifeval(shuffle: bool = True) -> Dataset:
     data = []
     dataset_path = "datagen/ifeval/ifeval.jsonl"
     with open(dataset_path, "r") as f:
         for line in f:
             ex = json.loads(line)
-            data.append({
-                "prompt": ex["messages"],
-                "instruction_ids": ex["instruction_id_list"],
-                "kwargs": ex["kwargs"]
-            })
+            data.append(
+                {
+                    "prompt": ex["messages"],
+                    "instruction_ids": ex["instruction_id_list"],
+                    "kwargs": ex["kwargs"],
+                }
+            )
 
     dataset = Dataset.from_list(data)
     if shuffle:
         return dataset.shuffle(seed=42)
     return dataset
 
+
 def extract_response_text(completions):
-    return [completion[0]['content'] for completion in completions]
+    return [completion[0]["content"] for completion in completions]
+
 
 def reward_instruction_following(
-    completions,
-    instruction_ids: list[list[str]],
-    kwargs: list[list[dict]],
-    **_
+    completions, instruction_ids: list[list[str]], kwargs: list[list[dict]], **_
 ) -> list[float]:
     responses = extract_response_text(completions)
     rewards = []
@@ -41,9 +43,7 @@ def reward_instruction_following(
 
             # Filter kwargs to only accepted arguments
             valid_keys = inspect.signature(instruction.build_description).parameters
-            safe_kwargs = {
-                k: v for k, v in kwargs[i][j].items() if k in valid_keys
-            }
+            safe_kwargs = {k: v for k, v in kwargs[i][j].items() if k in valid_keys}
 
             try:
                 instruction.build_description(**safe_kwargs)

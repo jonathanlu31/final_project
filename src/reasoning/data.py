@@ -5,7 +5,9 @@ from transformers import AutoTokenizer
 from reasoning.configs import DataArguments
 
 
-def format_pir_data(tokenizer: AutoTokenizer, example: dict[str, str], tokenize: bool = False):
+def format_pir_data(
+    tokenizer: AutoTokenizer, example: dict[str, str], tokenize: bool = False
+):
     last_message = example["messages"][-1]
     assert last_message["role"] == "assistant"
     conversation = tokenizer.apply_chat_template(
@@ -29,7 +31,9 @@ def format_medical_data(example):
     }
 
 
-def get_dataset(data_args: DataArguments, seed: int, tokenizer: AutoTokenizer) -> Dataset:
+def get_dataset(
+    data_args: DataArguments, seed: int, tokenizer: AutoTokenizer
+) -> Dataset:
     """Loads and processes the dataset"""
     dataset_name = data_args.dataset_name
 
@@ -37,7 +41,9 @@ def get_dataset(data_args: DataArguments, seed: int, tokenizer: AutoTokenizer) -
         with PartialState().local_main_process_first():
             dataset = load_dataset(data_args.dataset_path)[data_args.split]
             dataset = dataset.map(
-                lambda x: format_pir_data(tokenizer, x, tokenize=True), remove_columns=dataset.column_names, num_proc=4,
+                lambda x: format_pir_data(tokenizer, x, tokenize=True),
+                remove_columns=dataset.column_names,
+                num_proc=4,
             )
             split_dataset = dataset.train_test_split(
                 test_size=data_args.test_size, seed=seed
