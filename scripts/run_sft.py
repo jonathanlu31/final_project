@@ -60,7 +60,7 @@ def main(args):
     run_prefix = getattr(training_args, "run_prefix", f"sft_{data_args.dataset_name}")
     run_name = f"{run_prefix}_{timestamp}"
     training_args.run_name = run_name
-    output_dir = os.path.join(training_args.output_dir, run_name)
+    training_args.output_dir = os.path.join(training_args.output_dir, run_name)
 
     ###############
     # Setup tokenizer
@@ -92,6 +92,7 @@ def main(args):
     model = AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         device_map=model_args.device_map,
+        use_cache=False,
         **model_load_params,
     )
 
@@ -120,8 +121,8 @@ def main(args):
 
     trainer.train()
 
-    logger.info(f"Training completed. Saving model to {output_dir}")
-    trainer.save_model(output_dir)
+    logger.info(f"Training completed. Saving model to {training_args.output_dir}")
+    trainer.save_model(training_args.output_dir)
 
     config_dict = {
         "model_args": asdict(model_args),
@@ -129,11 +130,11 @@ def main(args):
         "training_args": asdict(training_args),
     }
 
-    config_path = os.path.join(output_dir, "training_config.yaml")
+    config_path = os.path.join(training_args.output_dir, "training_config.yaml")
     with open(config_path, "w") as f:
         yaml.dump(config_dict, f, default_flow_style=False)
 
-    logger.info(f"Model and config saved to {output_dir}")
+    logger.info(f"Model and config saved to {training_args.output_dir}")
 
 
 if __name__ == "__main__":

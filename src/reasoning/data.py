@@ -45,6 +45,8 @@ def get_dataset(
                 remove_columns=dataset.column_names,
                 num_proc=4,
             )
+            if data_args.shuffle:
+                dataset = dataset.shuffle(seed=seed)
             split_dataset = dataset.train_test_split(
                 test_size=data_args.test_size, seed=seed
             )

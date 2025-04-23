@@ -99,6 +99,7 @@ class DataArguments:
     )
     split: str | None = ("train",)
     test_size: float | None = 0.05
+    shuffle: bool = True
 
 
 @dataclass
