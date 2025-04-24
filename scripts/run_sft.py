@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import shutil
 import sys
 from dataclasses import asdict
 from datetime import datetime
@@ -110,6 +111,16 @@ def main(args):
         model = get_peft_model(model, peft_config)
         if training_args.local_rank == 0:
             model.print_trainable_parameters()
+            model.save_pretrained(os.path.join(training_args.output_dir, "lora_init"))
+
+    if training_args.local_rank == 0:
+        config_path = os.path.join(model_args.model_name_or_path, "config.json")
+        output_config_path = os.path.join(training_args.output_dir, "config.json")
+        shutil.copy2(config_path, output_config_path)
+        logger.info(f"Copied config.json to {output_config_path}")
+
+        tokenizer.save_pretrained(training_args.output_dir)
+        logger.info(f"Saved tokenizer to {training_args.output_dir}")
 
     trainer = SFTTrainer(
         model=model,
