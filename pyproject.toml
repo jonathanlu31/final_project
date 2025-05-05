@@ -12,6 +12,10 @@ dependencies = [
     "peft",
     "accelerate",
     "torch",
+    "immutable-dict",
+    "nltk",
+    "langdetect",
+    "absl-py",
 ]
 
 [build-system]
