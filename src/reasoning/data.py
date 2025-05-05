@@ -13,13 +13,23 @@ def format_pir_data(
     conversation = tokenizer.apply_chat_template(
         example["messages"][:-1], tokenize=False, add_generation_prompt=True
     )
-    # NOTE: this only works for R1 chat template
-    conversation += (
-        last_message["reasoning_content"].rstrip()
-        + "\n</think>\n\n"
-        + last_message["content"].strip()
-        + "<｜end▁of▁sentence｜>"
-    )
+    if "R1" in tokenizer.name_or_path:
+        assistant_response = (
+            last_message["reasoning_content"].rstrip()
+            + "\n</think>\n\n"
+            + last_message["content"].strip()
+            + tokenizer.eos_token
+        )
+    elif "Qwen3" in tokenizer.name_or_path:
+        assistant_response = (
+            "<think>\n"
+            + last_message["reasoning_content"].rstrip()
+            + "\n</think>\n\n"
+            + last_message["content"].strip()
+            + tokenizer.eos_token
+        )
+
+    conversation += assistant_response
     if tokenize:
         return {**tokenizer(conversation, add_special_tokens=False)}
     return {"text": conversation}

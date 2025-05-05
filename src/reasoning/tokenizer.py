@@ -12,6 +12,9 @@ def get_tokenizer_and_collator(tokenizer_path: str):
         # I believe DataCollator probably calculates mask by checking token == pad_token_id
         # so if pad_token_id is eos_token_id, it will cause the model to not predict eos
         tokenizer.pad_token = "<|video_pad|>"
+    elif "Qwen3" in tokenizer_path:
+        response_template = "<|im_start|>assistant\n"
+        # No need to set pad token because Qwen sets it correctly
     else:
         raise ValueError(f"Unsupported tokenizer: {tokenizer_path}")
 

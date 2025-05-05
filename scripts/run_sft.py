@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import shutil
 import sys
 from dataclasses import asdict
 from datetime import datetime
@@ -120,8 +119,7 @@ def main(args):
     #    logger.info(f"Copied config.json to {output_config_path}")
 
     #    tokenizer.save_pretrained(training_args.output_dir)
-    #    logger.info(f"Saved tokenizer to {training_args.output_dir}")
-
+    
     trainer = SFTTrainer(
         model=model,
         args=training_args,

@@ -1,0 +1,52 @@
+# Dataset configuration
+dataset_name: "pir"  # Options: "medical", "pir"
+dataset_path: "jonluj/pir"
+split: "train"
+test_size: 0.05
+
+# Model configuration
+model_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-4B
+torch_dtype: bfloat16
+tokenizer_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-4B
+trust_remote_code: false
+attn_implementation: "flash_attention_2"
+device_map:
+
+# LoRA configuration
+peft_enabled: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+bias: "none"
+target_modules: all-linear
+
+# Training configuration
+optim: adamw_torch
+learning_rate: 1.0e-4
+weight_decay: 0.1
+warmup_ratio: 0.1
+lr_scheduler_type: cosine
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+num_train_epochs: 3
+max_grad_norm: 1.0
+run_prefix: "sft_pir_lora"
+output_dir: ./outputs
+logging_steps: 5
+logging_strategy: steps
+bf16: true
+fp16: false
+save_steps: 100
+save_total_limit: 2
+eval_strategy: steps
+eval_steps: 100
+load_best_model_at_end: true
+metric_for_best_model: eval_loss
+report_to: wandb
+wandb_project: qwen_reasoning
+log_on_each_node: false
+packing: false
+max_seq_length: 8192
+seed: 42
+use_liger: true
+log_level: info
