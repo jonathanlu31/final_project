@@ -57,7 +57,7 @@ def main(args):
 
     # Setup model name and output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_prefix = getattr(training_args, "run_prefix", f"sft_{data_args.dataset_name}")
+    run_prefix = getattr(training_args, "run_prefix", "sft_pir")
     run_name = f"{run_prefix}_{timestamp}"
     training_args.run_name = run_name
     training_args.output_dir = os.path.join(training_args.output_dir, run_name)
@@ -66,7 +66,9 @@ def main(args):
     # Setup tokenizer
     ###############
 
-    tokenizer, collator = get_tokenizer_and_collator(model_args.tokenizer_name_or_path)
+    tokenizer, collator = get_tokenizer_and_collator(
+        model_args.tokenizer_name_or_path, padding_free=data_args.pad_free
+    )
 
     ###############
     # Setup dataset

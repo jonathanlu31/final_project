@@ -1,5 +1,5 @@
 from accelerate import PartialState
-from datasets import Dataset, load_dataset
+from datasets import Dataset, concatenate_datasets, load_dataset
 from transformers import AutoTokenizer
 
 from reasoning.configs import DataArguments
@@ -35,51 +35,33 @@ def format_pir_data(
     return {"text": conversation}
 
 
-def format_medical_data(example):
-    return {
-        "formatted_text": f"{example['Question'].strip()}\n{example['Response'].strip()}"
-    }
-
-
 def get_dataset(
     data_args: DataArguments, seed: int, tokenizer: AutoTokenizer
 ) -> Dataset:
     """Loads and processes the dataset"""
-    dataset_name = data_args.dataset_name
-
-    if dataset_name == "pir":
+    if "pir" in data_args.dataset_path:
         with PartialState().local_main_process_first():
-            dataset = load_dataset(data_args.dataset_path)[data_args.split]
-            dataset = dataset.map(
-                lambda x: format_pir_data(tokenizer, x, tokenize=True),
-                remove_columns=dataset.column_names,
-                num_proc=4,
-            )
+            datasets = [
+                load_dataset(data_args.dataset_path, config)[data_args.split]
+                for config in data_args.dataset_subsets
+            ]
+            datasets = [
+                ds.map(
+                    lambda x: format_pir_data(tokenizer, x, tokenize=True),
+                    remove_columns=ds.column_names,
+                    num_proc=4,
+                )
+                for ds in datasets
+            ]
+            full_ds = concatenate_datasets(datasets)
+
             if data_args.shuffle:
-                dataset = dataset.shuffle(seed=seed)
-            split_dataset = dataset.train_test_split(
+                full_ds = full_ds.shuffle(seed=seed)
+            split_dataset = full_ds.train_test_split(
                 test_size=data_args.test_size, seed=seed
             )
         train_data = split_dataset["train"]
         eval_data = split_dataset["test"]
-
-    elif dataset_name == "medical":
-        with PartialState().local_main_process_first():
-            dataset = load_dataset(data_args.dataset_path)
-            split_dataset = dataset[data_args.split].train_test_split(
-                test_size=data_args.test_size, seed=seed
-            )
-        train_data = split_dataset["train"]
-        eval_data = split_dataset["test"]
-
-        # Process the medical dataset
-        train_data = train_data.map(
-            format_medical_data, remove_columns=train_data.column_names
-        )
-        eval_data = eval_data.map(
-            format_medical_data, remove_columns=eval_data.column_names
-        )
-
     else:
-        raise ValueError(f"Unknown dataset: {dataset_name}")
+        raise ValueError(f"Unknown dataset: {data_args.dataset_path}")
     return train_data, eval_data

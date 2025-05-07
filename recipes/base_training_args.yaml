@@ -15,7 +15,7 @@ report_to: wandb
 wandb_project: qwen_reasoning
 log_on_each_node: false
 packing: false
-max_seq_length: 8192
+max_seq_length: 16384
 seed: 42
 use_liger: true
 log_level: info
