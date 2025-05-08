@@ -89,17 +89,17 @@ class DataArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
-    dataset_name: str | None = field(
-        default=None,
-        metadata={"help": ("The name of the dataset to use.")},
-    )
     dataset_path: str | None = field(
         default=None,
         metadata={"help": ("The path to the dataset to use.")},
     )
+    dataset_subsets: list[str] = field(
+        default_factory=list,
+    )
     split: str | None = ("train",)
     test_size: float | None = 0.05
     shuffle: bool = True
+    pad_free: bool = True
 
 
 @dataclass

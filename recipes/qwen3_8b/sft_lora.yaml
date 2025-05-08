@@ -9,11 +9,11 @@ test_size: 0.05
 pad_free: false # need to specify here because it goes to the collator
 
 # Model configuration
-model_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-4B
+model_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-8B
 torch_dtype: bfloat16
-tokenizer_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-4B
+tokenizer_name_or_path: /scratch/public_models/huggingface/Qwen/Qwen3-8B
 trust_remote_code: false
-attn_implementation: "flash_attention_2"
+attn_implementation: flash_attention_2
 device_map:
 
 # LoRA configuration
@@ -21,7 +21,7 @@ peft_enabled: true
 lora_r: 16
 lora_alpha: 32
 lora_dropout: 0.05
-bias: "none"
+bias: none
 target_modules: all-linear
 
 # Training configuration
@@ -34,7 +34,7 @@ per_device_train_batch_size: 2
 gradient_accumulation_steps: 4
 num_train_epochs: 3
 max_grad_norm: 1.0
-run_prefix: "sft_pir_lora"
+run_prefix: sft_pir_lora
 output_dir: ./outputs
 logging_steps: 5
 logging_strategy: steps
