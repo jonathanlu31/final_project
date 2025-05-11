@@ -2,7 +2,7 @@
 name = "reasoning"
 version = "0.1.0"
 description = ""
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.11,<3.13"
 dependencies = [
     "transformers",
     "datasets",
@@ -12,11 +12,23 @@ dependencies = [
     "peft",
     "accelerate",
     "torch",
-    "immutable-dict",
+    "immutabledict",
     "nltk",
     "langdetect",
     "absl-py",
+    "vllm>=0.8.3",
+    "wandb",
+    "deepspeed>=0.16.7",
 ]
+
+[project.optional-dependencies]
+compile = [
+    "flash-attn"
+]
+
+[tool.uv]
+no-build-isolation-package = ["flash-attn"]
+package = true
 
 [build-system]
 requires = ["hatchling"]

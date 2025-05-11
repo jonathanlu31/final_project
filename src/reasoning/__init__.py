@@ -6,6 +6,10 @@ from reasoning.rules.utils import (
     strict_format_reward_func,
     loose_format_reward_func,
 )
+from reasoning.pir.utils import (
+    format_for_grpo,
+    pir_reward_func,
+)
 from reasoning.ifeval.utils import get_ifeval, reward_instruction_following
 from reasoning.tokenizer import get_tokenizer_and_collator
 
@@ -22,4 +26,6 @@ __all__ = [
     "loose_format_reward_func",
     "get_tokenizer_and_collator",
     "DPOConfig",
+    "format_for_grpo",
+    "pir_reward_func",
 ]
