@@ -1,0 +1,3 @@
+[submodule "AgentDojo"]
+	path = AgentDojo
+	url = https://github.com/thavens/agentdojo.git
