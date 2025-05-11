@@ -19,6 +19,7 @@ dependencies = [
     "vllm>=0.8.3",
     "wandb",
     "deepspeed>=0.16.7",
+    "agentdojo"
 ]
 
 [project.optional-dependencies]
@@ -33,6 +34,9 @@ package = true
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+agentdojo = { path = "AgentDojo", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/reasoning"]
