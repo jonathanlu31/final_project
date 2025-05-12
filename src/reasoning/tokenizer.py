@@ -2,7 +2,7 @@ from transformers import AutoTokenizer
 from trl import DataCollatorForCompletionOnlyLM
 
 
-def get_tokenizer_and_collator(tokenizer_path: str, padding_free: bool = True):
+def get_tokenizer_and_collator(tokenizer_path: str, padding_free: bool = False):
     tokenizer = AutoTokenizer.from_pretrained(
         tokenizer_path, padding_side="left", use_fast=True
     )

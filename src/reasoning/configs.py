@@ -106,3 +106,8 @@ class DataArguments:
 class SFTConfig(trl.SFTConfig):
     run_prefix: str | None = None
     wandb_project: str | None = None
+
+@dataclass
+class DPOConfig(trl.DPOConfig):
+    run_prefix: str | None = None
+    wandb_project: str | None = None

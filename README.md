@@ -30,6 +30,18 @@ Chat with a checkpoint
 cd scripts
 python chat.py --model <model_path>
 ```
+
+### Using AgentDojo
+```bash
+python -m agentdojo.scripts.benchmark --model local --attack important_instructions
+```
+Use this to start a run without a self contained VLLM server. VLLM server should be started with
+```bash
+uv run vllm serve Qwen/Qwen2.5-7B-Instruct/ --tool-call-parser hermes --enable-auto-tool-choice
+```
+
+To run with support for automatic starting and stopping of VLLM server use the following script:
+`AgentDojo/run_vllm.sh Qwen/Qwen2.5-7B-Instruct/`
 </del>
 
 ## Project Structure

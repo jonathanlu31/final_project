@@ -11,11 +11,13 @@ from reasoning import (
     correctness_reward_func,
     strict_format_reward_func,
     loose_format_reward_func,
+    format_for_grpo,
+    pir_reward_func
 )
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="redteam", choices=["redteam", "ifeval"])
+    parser.add_argument("--dataset", type=str, default="redteam", choices=["redteam", "ifeval", "pir"])
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-0.5B-Instruct")
     args = parser.parse_args()
 
@@ -33,6 +35,33 @@ def main():
             dataset = get_ifeval(shuffle=True)
         reward_funcs = [reward_instruction_following]
         run_prefix = "qwen_ifeval"
+    elif args.dataset == "pir":
+        import datasets
+        from datasets import load_dataset
+        
+        def set_benign(example, flag):
+            example["benign"] = flag
+            return example
+
+        benign = load_dataset("jonluj/pir_full", "grpo_benign", split="train")
+        injected = load_dataset("jonluj/pir_full", "grpo_injected", split="train")
+        
+        benign = benign.map(lambda x: set_benign(x, True))
+        injected = injected.map(lambda x: set_benign(x, False))
+        dataset = datasets.concatenate_datasets([benign, injected])
+        
+        dataset = dataset.map(
+            format_for_grpo,
+            remove_columns=dataset.column_names,
+        )
+        
+        reward_funcs = [
+            strict_format_reward_func,
+            loose_format_reward_func,
+            pir_reward_func
+        ]
+        
+        run_prefix = "qwen_pir"
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
 
@@ -50,11 +79,10 @@ def main():
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
         logging_steps=5,
-        bf16=False,
-        fp16=False,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=2,
-        num_generations=2,
+        bf16=True,
+        per_device_train_batch_size=8,
+        gradient_accumulation_steps=8,
+        num_generations=24,
         max_prompt_length=1024,
         max_completion_length=1024,
         num_train_epochs=3,
@@ -63,9 +91,7 @@ def main():
         report_to="wandb",
         log_on_each_node=False,
         use_vllm=True,
-        vllm_dtype="float16",
-        vllm_max_model_len=2048,
-        vllm_gpu_memory_utilization=0.5
+        # use_liger_loss=True
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, padding_side="left")
@@ -73,9 +99,10 @@ def main():
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
-        torch_dtype=torch.float32,
-        attn_implementation="sdpa",
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
         device_map=None,
+        use_cache=False,
     ).to("cuda")
 
     trainer = GRPOTrainer(
