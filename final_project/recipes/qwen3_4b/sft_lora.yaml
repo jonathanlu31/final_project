@@ -1,0 +1,60 @@
+# Dataset configuration
+dataset_path: jonluj/pir_full
+dataset_subsets:
+  - sft_injected
+  - sft_benign
+  - s1.1
+split: train
+test_size: 0.05
+pad_free: false # need to specify here because it goes to the collator
+
+# Model configuration
+model_name_or_path: Qwen/Qwen3-4B
+torch_dtype: bfloat16
+tokenizer_name_or_path: Qwen/Qwen3-4B
+trust_remote_code: false
+attn_implementation: "flash_attention_2"
+device_map:
+
+# LoRA configuration
+peft_enabled: true
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+bias: "none"
+target_modules: all-linear
+
+# Training configuration
+optim: adamw_torch
+learning_rate: 1.0e-4
+weight_decay: 0.1
+warmup_ratio: 0.1
+lr_scheduler_type: cosine
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 2
+gradient_accumulation_steps: 2
+num_train_epochs: 3
+max_grad_norm: 1.0
+run_prefix: "sft_pir_lora"
+output_dir: ./model_ckpts
+logging_steps: 5
+logging_strategy: steps
+bf16: true
+fp16: false
+save_steps: 100
+save_total_limit: 2
+eval_strategy: steps
+eval_steps: 100
+load_best_model_at_end: false
+metric_for_best_model: eval_loss
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+report_to: wandb
+wandb_project: qwen_reasoning
+log_on_each_node: false
+packing: false
+max_seq_length: 16384
+seed: 42
+use_liger: true
+log_level: info
