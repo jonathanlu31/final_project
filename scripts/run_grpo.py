@@ -12,12 +12,15 @@ from reasoning import (
     strict_format_reward_func,
     loose_format_reward_func,
     format_for_grpo,
-    pir_reward_func
+    pir_reward_func,
 )
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="redteam", choices=["redteam", "ifeval", "pir"])
+    parser.add_argument(
+        "--dataset", type=str, default="redteam", choices=["redteam", "ifeval", "pir"]
+    )
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-0.5B-Instruct")
     args = parser.parse_args()
 
@@ -38,29 +41,41 @@ def main():
     elif args.dataset == "pir":
         import datasets
         from datasets import load_dataset
-        
+
         def set_benign(example, flag):
             example["benign"] = flag
             return example
 
         benign = load_dataset("jonluj/pir_full", "grpo_benign", split="train")
         injected = load_dataset("jonluj/pir_full", "grpo_injected", split="train")
-        
-        benign = benign.map(lambda x: set_benign(x, True))
-        injected = injected.map(lambda x: set_benign(x, False))
-        dataset = datasets.concatenate_datasets([benign, injected])
-        
-        dataset = dataset.map(
-            format_for_grpo,
-            remove_columns=dataset.column_names,
+
+        benign = benign.map(
+            lambda x: set_benign(x, True), cache_file_name=None, keep_in_memory=True
         )
-        
+        injected = injected.map(
+            lambda x: set_benign(x, False), cache_file_name=None, keep_in_memory=True
+        )
+        benign = benign.map(
+            format_for_grpo,
+            remove_columns=benign.column_names,
+            cache_file_name=None,
+            keep_in_memory=True,
+        )
+        injected = injected.map(
+            format_for_grpo,
+            remove_columns=injected.column_names,
+            cache_file_name=None,
+            keep_in_memory=True,
+        )
+        dataset = datasets.concatenate_datasets([benign, injected])
+
+
         reward_funcs = [
             strict_format_reward_func,
             loose_format_reward_func,
-            pir_reward_func
+            pir_reward_func,
         ]
-        
+
         run_prefix = "qwen_pir"
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
@@ -72,7 +87,7 @@ def main():
     training_args = GRPOConfig(
         output_dir=output_dir,
         run_name=run_name,
-        learning_rate=5e-6,
+        learning_rate=1e-6,
         adam_beta1=0.9,
         adam_beta2=0.99,
         weight_decay=0.1,
@@ -85,7 +100,7 @@ def main():
         num_generations=24,
         max_prompt_length=1024,
         max_completion_length=1024,
-        num_train_epochs=3,
+        num_train_epochs=1,
         save_steps=100,
         max_grad_norm=1.0,
         report_to="wandb",
@@ -114,6 +129,6 @@ def main():
     )
     trainer.train()
 
+
 if __name__ == "__main__":
     main()
-
