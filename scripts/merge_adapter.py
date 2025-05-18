@@ -1,7 +1,7 @@
 from transformers import AutoModelForCausalLM
-from peft import PeftModel, get_peft_model, LoraConfig
+from peft import PeftModel
 import argparse
-
+import torch
 parser = argparse.ArgumentParser()
 parser.add_argument("base_model", type=str)
 parser.add_argument("lora_adapter", type=str, help="Path to lora adapter or huggingface repo. The folder must have adapter_config.json and adapter_model.safetensors or adapter_model.bin")
@@ -13,4 +13,5 @@ base_model = AutoModelForCausalLM.from_pretrained(args.base_model)
 model = PeftModel.from_pretrained(base_model, args.lora_adapter)
 model = model.merge_and_unload()
 
+model = model.to(torch.bfloat16)
 model.save_pretrained(args.output_dir)
