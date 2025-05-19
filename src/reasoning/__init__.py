@@ -1,4 +1,4 @@
-from reasoning.configs import DataArguments, ModelArguments, SFTConfig, DPOConfig
+from reasoning.configs import DataArguments, ModelArguments, SFTConfig, DPOConfig, GRPOConfig
 from reasoning.data import get_dataset
 from reasoning.rules.utils import (
     get_redteam,
@@ -28,4 +28,5 @@ __all__ = [
     "DPOConfig",
     "format_for_grpo",
     "pir_reward_func",
+    "GRPOConfig",
 ]

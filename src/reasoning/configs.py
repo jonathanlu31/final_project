@@ -111,3 +111,8 @@ class SFTConfig(trl.SFTConfig):
 class DPOConfig(trl.DPOConfig):
     run_prefix: str | None = None
     wandb_project: str | None = None
+
+@dataclass
+class GRPOConfig(trl.GRPOConfig):
+    run_prefix: str | None = None
+    wandb_project: str | None = None

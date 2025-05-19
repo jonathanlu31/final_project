@@ -1,30 +1,42 @@
 import argparse
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from trl import GRPOConfig, GRPOTrainer
-from accelerate import PartialState
+import os
+from dataclasses import asdict
 from datetime import datetime
+
+import datasets
+import torch
+import yaml
+from accelerate import PartialState
+from datasets import load_dataset
 from reasoning import (
-    get_redteam,
-    get_ifeval,
-    reward_instruction_following,
+    DataArguments,
+    GRPOConfig,
+    ModelArguments,
     correctness_reward_func,
-    strict_format_reward_func,
-    loose_format_reward_func,
     format_for_grpo,
+    get_ifeval,
+    get_redteam,
+    loose_format_reward_func,
     pir_reward_func,
+    reward_instruction_following,
+    strict_format_reward_func,
 )
+from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser, set_seed
+from trl import GRPOTrainer
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset", type=str, default="redteam", choices=["redteam", "ifeval", "pir"]
+def main(args):
+    parser = HfArgumentParser((ModelArguments, DataArguments, GRPOConfig))
+    parsed: tuple[ModelArguments, DataArguments, GRPOConfig] = parser.parse_yaml_file(
+        args.config
     )
-    parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-0.5B-Instruct")
-    args = parser.parse_args()
+    model_args, data_args, training_args = parsed
 
-    if args.dataset == "redteam":
+    set_seed(training_args.seed)
+    if training_args.wandb_project:
+        os.environ["WANDB_PROJECT"] = training_args.wandb_project
+
+    if "redteam" in data_args.dataset_path:
         with PartialState().local_main_process_first():
             dataset = get_redteam(shuffle=True)
         reward_funcs = [
@@ -32,15 +44,11 @@ def main():
             loose_format_reward_func,
             correctness_reward_func,
         ]
-        run_prefix = "qwen_redteam"
-    elif args.dataset == "ifeval":
+    elif "ifeval" in data_args.dataset_path:
         with PartialState().local_main_process_first():
             dataset = get_ifeval(shuffle=True)
         reward_funcs = [reward_instruction_following]
-        run_prefix = "qwen_ifeval"
-    elif args.dataset == "pir":
-        import datasets
-        from datasets import load_dataset
+    elif "pir" in data_args.dataset_path:
 
         def set_benign(example, flag):
             example["benign"] = flag
@@ -69,56 +77,42 @@ def main():
         )
         dataset = datasets.concatenate_datasets([benign, injected])
 
-
         reward_funcs = [
             strict_format_reward_func,
             loose_format_reward_func,
             pir_reward_func,
         ]
-
-        run_prefix = "qwen_pir"
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_prefix = getattr(training_args, "run_prefix", "grpo")
     run_name = f"{run_prefix}_{timestamp}"
-    output_dir = f"./outputs/{run_name}"
+    training_args.run_name = run_name
+    training_args.output_dir = os.path.join(training_args.output_dir, run_name)
 
-    training_args = GRPOConfig(
-        output_dir=output_dir,
-        run_name=run_name,
-        learning_rate=1e-6,
-        adam_beta1=0.9,
-        adam_beta2=0.99,
-        weight_decay=0.1,
-        warmup_ratio=0.1,
-        lr_scheduler_type="cosine",
-        logging_steps=5,
-        bf16=True,
-        per_device_train_batch_size=8,
-        gradient_accumulation_steps=8,
-        num_generations=24,
-        max_prompt_length=1024,
-        max_completion_length=1024,
-        num_train_epochs=1,
-        save_steps=100,
-        max_grad_norm=1.0,
-        report_to="wandb",
-        log_on_each_node=False,
-        use_vllm=True,
-        # use_liger_loss=True
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.tokenizer_name_or_path, padding_side="left"
     )
-
-    tokenizer = AutoTokenizer.from_pretrained(args.model, padding_side="left")
     tokenizer.pad_token = tokenizer.eos_token
 
+    torch_dtype = (
+        model_args.torch_dtype
+        if model_args.torch_dtype in ["auto", None]
+        else getattr(torch, model_args.torch_dtype)
+    )
+    model_load_params = {
+        "torch_dtype": torch_dtype,
+        "attn_implementation": model_args.attn_implementation,
+        "trust_remote_code": model_args.trust_remote_code,
+    }
+
     model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        device_map=None,
+        model_args.model_name_or_path,
+        device_map=model_args.device_map,
         use_cache=False,
-    ).to("cuda")
+        **model_load_params,
+    )
 
     trainer = GRPOTrainer(
         model=model,
@@ -128,7 +122,21 @@ def main():
         train_dataset=dataset,
     )
     trainer.train()
+    trainer.save_model(training_args.output_dir)
 
+    config_dict = {
+        "model_args": asdict(model_args),
+        "data_args": asdict(data_args),
+        "training_args": asdict(training_args),
+    }
+
+    config_path = os.path.join(training_args.output_dir, "training_config.yaml")
+    with open(config_path, "w") as f:
+        yaml.dump(config_dict, f, default_flow_style=False)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, required=True)
+    args = parser.parse_args()
+
+    main(args)
