@@ -47,9 +47,6 @@ if __name__ == "__main__":
 
     engine_group = parser.add_argument_group("Engine arguments")
     EngineArgs.add_cli_args(engine_group)
-    engine_group.set_defaults(
-        model="/scratch/jonathan/research/reasoning_project/final_project/scripts/results/qwen_rules/checkpoint-400"
-    )
 
     sampling_group = parser.add_argument_group("Sampling parameters")
     sampling_group.add_argument("--max-tokens", type=int, default=2048)
